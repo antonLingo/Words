@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Русская клавиатура слов</title>
 
   <style>
@@ -15,7 +15,8 @@
       margin: 0;
       padding: 0;
       width: 100%;
-      min-height: 100%;
+      height: 100%;
+      overflow: hidden;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: #f4f6f8;
       color: #111827;
@@ -23,49 +24,65 @@
 
     .app {
       width: 100%;
-      min-height: 100vh;
+      height: 100dvh;
       display: flex;
       flex-direction: column;
-      padding: 12px;
-      gap: 10px;
+      padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom)) 8px;
+      gap: 8px;
+      overflow: hidden;
     }
 
     .status {
-      font-size: 13px;
+      font-size: 12px;
       color: #6b7280;
-      min-height: 18px;
+      min-height: 16px;
       text-align: center;
+      flex: 0 0 auto;
     }
 
     .inputBox {
       width: 100%;
-      min-height: 170px;
-      padding: 16px;
+      flex: 1 1 auto;
+      min-height: 0;
+      padding: 14px;
       border: 2px solid #d1d5db;
-      border-radius: 18px;
+      border-radius: 16px;
       background: #ffffff;
-      font-size: 32px;
+      font-size: 30px;
       line-height: 1.45;
       word-break: break-word;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+      white-space: pre-wrap;
+    }
+
+    .bottomPanel {
+      flex: 0 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
     }
 
     .controls {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      gap: 7px;
       width: 100%;
     }
 
     button {
       border: none;
-      border-radius: 12px;
-      min-height: 48px;
-      font-size: 20px;
+      border-radius: 10px;
+      min-height: 42px;
+      font-size: 18px;
       font-weight: 600;
       cursor: pointer;
       color: white;
       -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
     }
 
     .controlButton {
@@ -74,73 +91,61 @@
 
     .keyboard {
       width: 100%;
-      margin-top: auto;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
 
     .row {
       display: flex;
       justify-content: center;
-      gap: 6px;
+      gap: 4px;
       width: 100%;
     }
 
     .key {
       flex: 1;
-      max-width: 56px;
-      height: 52px;
-      border-radius: 12px;
-      font-size: 22px;
+      height: clamp(38px, 10.5vw, 48px);
+      border-radius: 9px;
+      font-size: clamp(17px, 5vw, 22px);
       background: #2563eb;
+      padding: 0;
     }
 
     .key.disabled {
       background: #d1d5db;
       color: #6b7280;
-      cursor: default;
-    }
-
-    .spaceRow {
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      padding-bottom: 8px;
     }
 
     .spaceButton {
-      width: min(520px, 100%);
-      height: 54px;
+      width: 100%;
+      height: 46px;
       background: #0f766e;
-      border-radius: 14px;
-      font-size: 20px;
+      border-radius: 12px;
+      font-size: 18px;
     }
 
-    @media (max-width: 430px) {
-      .app {
-        padding: 8px;
+    @media (max-height: 680px) {
+      .status {
+        display: none;
       }
 
       .inputBox {
-        min-height: 150px;
-        font-size: 28px;
-        padding: 14px;
-      }
-
-      .row {
-        gap: 4px;
-      }
-
-      .key {
-        height: 48px;
-        font-size: 20px;
-        border-radius: 10px;
+        font-size: 26px;
+        padding: 12px;
       }
 
       button {
-        min-height: 46px;
-        font-size: 18px;
+        min-height: 38px;
+        font-size: 17px;
+      }
+
+      .key {
+        height: clamp(34px, 9.5vw, 43px);
+      }
+
+      .spaceButton {
+        height: 40px;
       }
     }
   </style>
@@ -152,14 +157,14 @@
 
     <div id="currentInput" class="inputBox">—</div>
 
-    <div class="controls">
-      <button class="controlButton" onclick="removeLastLetter()">Удалить</button>
-      <button class="controlButton" onclick="clearInput()">Очистить</button>
-    </div>
+    <div class="bottomPanel">
+      <div class="controls">
+        <button class="controlButton" onclick="removeLastLetter()">Удалить</button>
+        <button class="controlButton" onclick="clearInput()">Очистить</button>
+      </div>
 
-    <div id="keyboard" class="keyboard"></div>
+      <div id="keyboard" class="keyboard"></div>
 
-    <div class="spaceRow">
       <button class="spaceButton" onclick="addSpace()">Пробел</button>
     </div>
   </div>
@@ -184,7 +189,9 @@
 
     let trie = {};
     let currentInput = "";
-    let forcedLetter = null;
+    let freeMode = false;
+    let lastGrayTapLetter = null;
+    let lastGrayTapTime = 0;
 
     function normalizeWord(word) {
       return String(word)
@@ -235,24 +242,49 @@
     }
 
     function getAvailableLetters() {
+      if (freeMode) {
+        return new Set(KEYBOARD_ROWS.flat());
+      }
+
       const currentWord = getCurrentWord();
       const node = getNode(currentWord);
 
-      if (!node) return [];
+      if (!node) return new Set();
 
-      return Object.keys(node).filter(key => key !== "isWord");
+      return new Set(Object.keys(node).filter(key => key !== "isWord"));
     }
 
-    function forceLetter(letter) {
+    function scrollTextToBottom() {
+      const box = document.getElementById("currentInput");
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function printLetter(letter) {
       currentInput += letter;
-      forcedLetter = letter;
       render();
     }
 
-    function render() {
-      document.getElementById("currentInput").textContent = currentInput || "—";
+    function handleGrayLetterTap(letter) {
+      const now = Date.now();
+      const isDoubleTap = lastGrayTapLetter === letter && now - lastGrayTapTime < 450;
 
-      const availableLetters = new Set(getAvailableLetters());
+      if (isDoubleTap) {
+        freeMode = true;
+        printLetter(letter);
+        lastGrayTapLetter = null;
+        lastGrayTapTime = 0;
+        return;
+      }
+
+      lastGrayTapLetter = letter;
+      lastGrayTapTime = now;
+    }
+
+    function render() {
+      const inputBox = document.getElementById("currentInput");
+      inputBox.textContent = currentInput || "—";
+
+      const availableLetters = getAvailableLetters();
       const keyboard = document.getElementById("keyboard");
       keyboard.innerHTML = "";
 
@@ -264,33 +296,12 @@
           const button = document.createElement("button");
           button.textContent = letter;
 
-          if (availableLetters.has(letter) || forcedLetter === letter) {
+          if (availableLetters.has(letter)) {
             button.className = "key";
-
-            button.onclick = () => {
-              currentInput += letter;
-              render();
-            };
+            button.onclick = () => printLetter(letter);
           } else {
             button.className = "key disabled";
-
-            let clickCount = 0;
-            let clickTimer = null;
-
-            button.onclick = () => {
-              clickCount++;
-
-              clearTimeout(clickTimer);
-
-              clickTimer = setTimeout(() => {
-                clickCount = 0;
-              }, 350);
-
-              if (clickCount >= 2) {
-                forceLetter(letter);
-                clickCount = 0;
-              }
-            };
+            button.onclick = () => handleGrayLetterTap(letter);
           }
 
           row.appendChild(button);
@@ -298,19 +309,20 @@
 
         keyboard.appendChild(row);
       }
+
+      requestAnimationFrame(scrollTextToBottom);
     }
 
     function removeLastLetter() {
       currentInput = currentInput.slice(0, -1);
-
-      forcedLetter = null;
-
       render();
     }
 
     function clearInput() {
       currentInput = "";
-      forcedLetter = null;
+      freeMode = false;
+      lastGrayTapLetter = null;
+      lastGrayTapTime = 0;
       render();
     }
 
@@ -319,8 +331,9 @@
         currentInput += " ";
       }
 
-      forcedLetter = null;
-
+      freeMode = false;
+      lastGrayTapLetter = null;
+      lastGrayTapTime = 0;
       render();
     }
 
