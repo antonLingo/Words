@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Русский пазл слов и предложений</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #f4f6f8;
+      color: #111827;
+    }
+
+    .app {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      padding: 24px;
+      border-radius: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+
+    .status {
+      margin-bottom: 16px;
+      color: #4b5563;
+      line-height: 1.5;
+    }
+
+    .inputBox {
+      min-height: 70px;
+      padding: 16px;
+      border: 2px solid #d1d5db;
+      border-radius: 16px;
+      font-size: 30px;
+      margin-bottom: 18px;
+      background: #fafafa;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 22px;
+      cursor: pointer;
+      background: #2563eb;
+      color: white;
+      transition: 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button.secondary {
+      background: #6b7280;
+    }
+
+    button.active {
+      background: #111827;
+    }
+
+    button.wordEnd {
+      background: #16a34a;
+    }
+
+    .section {
+      margin-top: 18px;
+    }
+
+    .card {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 14px;
+      background: #f9fafb;
+      color: #374151;
+    }
+
+    .warning {
+      background: #fff7ed;
+      color: #9a3412;
+    }
+
+    .ok {
+      background: #ecfdf5;
+      color: #166534;
+    }
+
+    .small {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #6b7280;
+    }
+
+    .spaceButton {
+      min-width: 120px;
+      background: #0f766e;
+    }
+
+    .sentencePreview {
+      margin-top: 8px;
+      font-size: 18px;
+      color: #1f2937;
+    }
+
+    .modeDescription {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #4b5563;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>Русский пазл слов и предложений</h1>
+
+    <div id="status" class="status">
+      Загружаю словарь...
+    </div>
+
+    <div class="buttons">
+      <button id="dictionaryModeBtn" class="active" onclick="setMode('dictionary')">
+        По словарю
+      </button>
+
+      <button id="rulesModeBtn" class="secondary" onclick="setMode('rules')">
+        Без словаря
+      </button>
+    </div>
+
+    <div id="currentInput" class="inputBox">—</div>
+
+    <div class="buttons">
+      <button class="secondary" onclick="removeLastLetter()">⌫ Удалить букву</button>
+      <button class="secondary" onclick="clearInput()">Очистить всё</button>
+      <button class="spaceButton" onclick="addSpace()">ПРОБЕЛ</button>
+    </div>
+
+    <div class="section">
+      <h3>Доступные следующие буквы:</h3>
+      <div id="letters" class="buttons"></div>
+    </div>
+
+    <div id="wordStatus" class="card"></div>
+
+    <div class="card">
+      <b>Примеры возможных слов:</b>
+      <div id="examples" class="sentencePreview"></div>
+    </div>
+
+    <div class="card warning">
+      <b>Важно:</b>
+      В Canvas внешние ссылки иногда не загружаются. Поэтому здесь есть резервный встроенный словарь.
+      Для настоящего приложения лучше хранить большой словарь локально: JSON или SQLite.
+    </div>
+
+    <div class="modeDescription">
+      После пробела система начинает проверять новое слово.
+      Например: <b>мне нужно записаться к врачу</b>
+    </div>
+  </div>
+
+  <script>
+    // Несколько онлайн-источников. Если первый не загрузится, код попробует следующий.
+    // В реальном приложении лучше не зависеть от интернета, а положить файл словаря локально.
+    const WORD_LIST_URLS = [
+      "https://raw.githubusercontent.com/danakt/russian-words/master/russian.txt",
+      "https://cdn.jsdelivr.net/gh/danakt/russian-words@master/russian.txt",
+      "https://rawcdn.githack.com/danakt/russian-words/master/russian.txt"
+    ];
+
+    // Резервный словарь: небольшой, но демо будет работать даже без внешней загрузки.
+    // Сюда специально добавлены бытовые и клинические слова.
+    const FALLBACK_WORDS = `
+я
+ты
+он
+она
+мы
+вы
+они
+мне
+меня
+мой
+моя
+мое
+мои
+твой
+ваш
+наш
+это
+этот
+эта
+эти
+здесь
+там
+куда
+где
+когда
+почему
+как
+что
+кто
+можно
+нужно
+надо
+хочу
+хотел
+хотела
+могу
+можете
+можешь
+скажите
+подскажите
+пожалуйста
+спасибо
+извините
+да
+нет
+хорошо
+плохо
+сейчас
+сегодня
+завтра
+вчера
+утром
+днем
+вечером
+ночью
+время
+дата
+день
+неделя
+месяц
+год
+час
+минута
+дом
+работа
+магазин
+аптека
+клиника
+больница
+офис
+регистратура
+стойка
+вход
+выход
+туалет
+комната
+кабинет
+врач
+доктор
+медсестра
+пациент
+прием
+запись
+записаться
+перезаписаться
+отменить
+подтвердить
+назначить
+заполнить
+анкета
+форма
+документ
+паспорт
+карта
+страховка
+адрес
+телефон
+номер
+имя
+фамилия
+рождение
+дата
+подпись
+оплата
+счет
+наличные
+карта
+страховой
+полис
+помощь
+проблема
+вопрос
+ответ
+жалоба
+боль
+болит
+болеть
+голова
+горло
+нос
+ухо
+глаз
+глаза
+зуб
+зубы
+живот
+спина
+грудь
+сердце
+рука
+руки
+нога
+ноги
+палец
+пальцы
+шея
+кожа
+кровь
+давление
+температура
+кашель
+насморк
+аллергия
+сыпь
+отек
+рана
+порез
+ожог
+тошнота
+рвота
+головокружение
+слабость
+усталость
+озноб
+жар
+дышать
+дыхание
+трудно
+сложно
+легко
+сильно
+слабый
+острый
+тупой
+постоянный
+иногда
+часто
+редко
+началось
+началась
+начался
+прошло
+стало
+лучше
+хуже
+лекарство
+таблетка
+капли
+мазь
+укол
+анализ
+крови
+мочи
+рентген
+снимок
+тест
+результат
+рецепт
+доза
+принимать
+пить
+есть
+спать
+ходить
+сидеть
+лежать
+стоять
+ждать
+прийти
+уйти
+идти
+ехать
+приехать
+позвонить
+говорить
+сказать
+спросить
+понять
+понимаю
+непонимаю
+повторите
+медленно
+переводчик
+русский
+английский
+украинский
+вода
+еда
+хлеб
+молоко
+чай
+кофе
+суп
+мясо
+рыба
+овощи
+фрукты
+яблоко
+банан
+рис
+соль
+сахар
+дорога
+машина
+автобус
+такси
+остановка
+улица
+город
+домой
+сюда
+туда
+близко
+далеко
+лево
+право
+прямо
+назад
+вперед
+открыть
+закрыть
+дать
+взять
+купить
+найти
+потерять
+оставить
+получить
+отправить
+принести
+показать
+посмотреть
+слушать
+слышать
+видеть
+знать
+думать
+жить
+любить
+работать
+учить
+учиться
+платить
+платеж
+аренда
+квартира
+комната
+ключ
+дверь
+окно
+почта
+письмо
+сообщение
+звонок
+звонить
+`.trim().split(/\s+/);
+
+    const RUSSIAN_LETTERS = "абвгдеежзийклмнопрстуфхцчшщъыьэюя";
+
+    let trie = {};
+    let currentInput = "";
+    let totalWords = 0;
+    let mode = "dictionary";
+    let dictionarySource = "fallback";
+
+    function normalizeWord(word) {
+      return String(word)
+        .toLowerCase()
+        .replace(/ё/g, "е")
+        .trim();
+    }
+
+    function getCurrentWord() {
+      const parts = currentInput.split(" ");
+      return normalizeWord(parts[parts.length - 1] || "");
+    }
+
+    function isGoodCommonWord(word) {
+      if (!/^[а-яё]+$/i.test(word)) return false;
+
+      const normalized = normalizeWord(word);
+
+      if (normalized.length < 1) return false;
+      if (normalized.length > 18) return false;
+
+      const rareEndings = [
+        "изация",
+        "ирование",
+        "ометрия",
+        "ологический",
+        "изациями",
+        "ационный"
+      ];
+
+      if (
+        normalized.length > 10 &&
+        rareEndings.some(end => normalized.endsWith(end))
+      ) {
+        return false;
+      }
+
+      const rarePatterns = ["кф", "щщ", "ъы"];
+
+      if (rarePatterns.some(p => normalized.includes(p))) {
+        return false;
+      }
+
+      return true;
+    }
+
+    function buildTrie(words) {
+      const root = {};
+
+      for (const originalWord of words) {
+        const word = normalizeWord(originalWord);
+        if (!word) continue;
+
+        let node = root;
+
+        for (const letter of word) {
+          if (!node[letter]) node[letter] = {};
+          node = node[letter];
+        }
+
+        node.isWord = true;
+      }
+
+      return root;
+    }
+
+    function prepareWords(words) {
+      const cleaned = words
+        .map(normalizeWord)
+        .filter(isGoodCommonWord);
+
+      return [...new Set(cleaned)];
+    }
+
+    function getNodeForWord(word) {
+      let node = trie;
+
+      for (const letter of normalizeWord(word)) {
+        if (!node[letter]) return null;
+        node = node[letter];
+      }
+
+      return node;
+    }
+
+    function sortRussianLetters(a, b) {
+      return RUSSIAN_LETTERS.indexOf(a) - RUSSIAN_LETTERS.indexOf(b);
+    }
+
+    function getAvailableLettersByDictionary(word) {
+      const node = getNodeForWord(word);
+
+      if (!node) return [];
+
+      return Object.keys(node)
+        .filter(key => key !== "isWord")
+        .sort(sortRussianLetters);
+    }
+
+    function getAvailableLettersBySoftRules(word) {
+      if (!word) {
+        return RUSSIAN_LETTERS
+          .split("")
+          .filter(letter => !["ь", "ъ", "ы"].includes(letter));
+      }
+
+      return RUSSIAN_LETTERS
+        .split("")
+        .filter(letter => isAllowedBySoftRules(word + letter))
+        .sort(sortRussianLetters);
+    }
+
+    function isAllowedBySoftRules(word) {
+      const normalized = normalizeWord(word);
+
+      if (normalized.length > 20) return false;
+
+      if (
+        normalized.includes("жы") ||
+        normalized.includes("шы") ||
+        normalized.includes("чя") ||
+        normalized.includes("щя") ||
+        normalized.includes("ьь") ||
+        normalized.includes("ъъ")
+      ) {
+        return false;
+      }
+
+      return true;
+    }
+
+    function isCompleteWord(word) {
+      const node = getNodeForWord(word);
+      return Boolean(node && node.isWord);
+    }
+
+    function getAvailableLetters() {
+      const currentWord = getCurrentWord();
+
+      if (mode === "dictionary") {
+        return getAvailableLettersByDictionary(currentWord);
+      }
+
+      return getAvailableLettersBySoftRules(currentWord);
+    }
+
+    function collectExamples(node, prefix, result, limit = 12) {
+      if (!node || result.length >= limit) return;
+
+      if (node.isWord) {
+        result.push(prefix);
+      }
+
+      const letters = Object.keys(node)
+        .filter(key => key !== "isWord")
+        .sort(sortRussianLetters);
+
+      for (const letter of letters) {
+        if (result.length >= limit) break;
+        collectExamples(node[letter], prefix + letter, result, limit);
+      }
+    }
+
+    function getExamples() {
+      if (mode === "rules") {
+        return ["Без словаря нельзя точно проверить реальные слова."];
+      }
+
+      const currentWord = getCurrentWord();
+      const node = getNodeForWord(currentWord);
+      const result = [];
+
+      collectExamples(node, currentWord, result);
+
+      return result;
+    }
+
+    function render() {
+      const inputBox = document.getElementById("currentInput");
+      const lettersBox = document.getElementById("letters");
+      const wordStatus = document.getElementById("wordStatus");
+      const examplesBox = document.getElementById("examples");
+      const dictionaryModeBtn = document.getElementById("dictionaryModeBtn");
+      const rulesModeBtn = document.getElementById("rulesModeBtn");
+
+      dictionaryModeBtn.className = mode === "dictionary" ? "active" : "secondary";
+      rulesModeBtn.className = mode === "rules" ? "active" : "secondary";
+
+      inputBox.textContent = currentInput || "—";
+      lettersBox.innerHTML = "";
+
+      const letters = getAvailableLetters();
+
+      for (const letter of letters) {
+        const button = document.createElement("button");
+        button.textContent = letter;
+        button.onclick = () => {
+          currentInput += letter;
+          render();
+        };
+        lettersBox.appendChild(button);
+      }
+
+      const currentWord = getCurrentWord();
+
+      if (mode === "dictionary") {
+        if (currentWord && isCompleteWord(currentWord)) {
+          wordStatus.innerHTML = `<button class="wordEnd">✓ Слово найдено: ${currentWord}</button>`;
+        } else if (currentWord) {
+          wordStatus.textContent = "Это пока начало слова.";
+        } else {
+          wordStatus.textContent = "Начните вводить предложение.";
+        }
+      } else {
+        wordStatus.textContent = "Без словаря: буквы почти не ограничиваются.";
+      }
+
+      const examples = getExamples();
+      examplesBox.textContent = examples.length ? examples.join(", ") : "Нет примеров.";
+    }
+
+    function setMode(newMode) {
+      mode = newMode;
+      render();
+    }
+
+    function removeLastLetter() {
+      currentInput = currentInput.slice(0, -1);
+      render();
+    }
+
+    function clearInput() {
+      currentInput = "";
+      render();
+    }
+
+    function addSpace() {
+      if (!currentInput) return;
+      if (!currentInput.endsWith(" ")) currentInput += " ";
+      render();
+    }
+
+    async function fetchDictionaryFromUrl(url) {
+      const response = await fetch(url, { cache: "force-cache" });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const text = await response.text();
+      const words = text.split(/\r?\n|\s+/).map(word => word.trim());
+      const prepared = prepareWords(words);
+
+      if (prepared.length < 1000) {
+        throw new Error("Слишком мало слов в загруженном файле");
+      }
+
+      return prepared;
+    }
+
+    function useFallbackDictionary() {
+      const prepared = prepareWords(FALLBACK_WORDS);
+      trie = buildTrie(prepared);
+      totalWords = prepared.length;
+      dictionarySource = "встроенный резервный словарь";
+    }
+
+    async function loadWords() {
+      const status = document.getElementById("status");
+
+      for (const url of WORD_LIST_URLS) {
+        try {
+          status.innerHTML = `Пробую загрузить словарь:<br><span class="small">${url}</span>`;
+
+          const words = await fetchDictionaryFromUrl(url);
+
+          trie = buildTrie(words);
+          totalWords = words.length;
+          dictionarySource = url.includes("jsdelivr") ? "jsDelivr/GitHub" : "GitHub";
+
+          status.innerHTML = `
+            <span class="ok">Словарь загружен.</span><br>
+            Источник: <b>${dictionarySource}</b><br>
+            Слов: <b>${totalWords.toLocaleString("ru-RU")}</b>
+          `;
+
+          render();
+          return;
+        } catch (error) {
+          console.warn("Не удалось загрузить:", url, error);
+        }
+      }
+
+      useFallbackDictionary();
+
+      status.innerHTML = `
+        <span class="warning">Онлайн-словарь не загрузился.</span><br>
+        Включён встроенный резервный словарь: <b>${totalWords.toLocaleString("ru-RU")} слов</b>.<br>
+        Для приложения лучше скачать большой словарь и положить его локально в JSON/SQLite.
+      `;
+
+      render();
+    }
+
+    loadWords();
+  </script>
+</body>
+</html>
