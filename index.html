@@ -3,209 +3,188 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Русский пазл слов и предложений</title>
+  <title>Русская клавиатура слов</title>
 
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 0;
-      padding: 24px;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: #f4f6f8;
       color: #111827;
     }
 
     .app {
-      max-width: 900px;
-      margin: 0 auto;
-      background: white;
-      padding: 24px;
-      border-radius: 24px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-    }
-
-    h1 {
-      font-size: 28px;
-      margin-top: 0;
-      margin-bottom: 10px;
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      gap: 10px;
     }
 
     .status {
-      margin-bottom: 16px;
-      color: #4b5563;
-      line-height: 1.5;
+      font-size: 13px;
+      color: #6b7280;
+      min-height: 18px;
+      text-align: center;
     }
 
     .inputBox {
-      min-height: 70px;
+      width: 100%;
+      min-height: 170px;
       padding: 16px;
       border: 2px solid #d1d5db;
-      border-radius: 16px;
-      font-size: 30px;
-      margin-bottom: 18px;
-      background: #fafafa;
-      line-height: 1.5;
+      border-radius: 18px;
+      background: #ffffff;
+      font-size: 32px;
+      line-height: 1.45;
       word-break: break-word;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
     }
 
-    .buttons {
-      display: flex;
-      flex-wrap: wrap;
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 8px;
-      margin-bottom: 20px;
+      width: 100%;
     }
 
     button {
       border: none;
       border-radius: 12px;
-      padding: 10px 14px;
-      font-size: 22px;
+      min-height: 48px;
+      font-size: 20px;
+      font-weight: 600;
       cursor: pointer;
-      background: #2563eb;
       color: white;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    button.secondary {
+    .controlButton {
       background: #6b7280;
     }
 
-    button.active {
-      background: #111827;
+    .keyboard {
+      width: 100%;
+      margin-top: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
 
-    button.wordEnd {
-      background: #16a34a;
+    .row {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .key {
+      flex: 1;
+      max-width: 56px;
+      height: 52px;
+      border-radius: 12px;
+      font-size: 22px;
+      background: #2563eb;
+    }
+
+    .key.disabled {
+      background: #d1d5db;
+      color: #6b7280;
+      cursor: default;
+    }
+
+    .spaceRow {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      padding-bottom: 8px;
     }
 
     .spaceButton {
-      min-width: 120px;
+      width: min(520px, 100%);
+      height: 54px;
       background: #0f766e;
-    }
-
-    .card {
-      margin-top: 16px;
-      padding: 14px;
       border-radius: 14px;
-      background: #f9fafb;
-      color: #374151;
-      line-height: 1.5;
+      font-size: 20px;
     }
 
-    .small {
-      font-size: 14px;
-      color: #6b7280;
+    @media (max-width: 430px) {
+      .app {
+        padding: 8px;
+      }
+
+      .inputBox {
+        min-height: 150px;
+        font-size: 28px;
+        padding: 14px;
+      }
+
+      .row {
+        gap: 4px;
+      }
+
+      .key {
+        height: 48px;
+        font-size: 20px;
+        border-radius: 10px;
+      }
+
+      button {
+        min-height: 46px;
+        font-size: 18px;
+      }
     }
   </style>
 </head>
 
 <body>
   <div class="app">
-
-    <h1>Русский пазл слов и предложений</h1>
-
-    <div id="status" class="status">
-      Загружаю словарь...
-    </div>
-
-    <div class="buttons">
-      <button
-        id="dictionaryModeBtn"
-        class="active"
-        onclick="setMode('dictionary')"
-      >
-        По словарю
-      </button>
-
-      <button
-        id="rulesModeBtn"
-        class="secondary"
-        onclick="setMode('rules')"
-      >
-        Без словаря
-      </button>
-    </div>
+    <div id="status" class="status">Загрузка словаря...</div>
 
     <div id="currentInput" class="inputBox">—</div>
 
-    <div class="buttons">
-      <button
-        class="secondary"
-        onclick="removeLastLetter()"
-      >
-        ⌫ Удалить букву
-      </button>
-
-      <button
-        class="secondary"
-        onclick="clearInput()"
-      >
-        Очистить всё
-      </button>
-
-      <button
-        class="spaceButton"
-        onclick="addSpace()"
-      >
-        ПРОБЕЛ
-      </button>
+    <div class="controls">
+      <button class="controlButton" onclick="removeLastLetter()">Удалить</button>
+      <button class="controlButton" onclick="clearInput()">Очистить</button>
     </div>
 
-    <h3>Доступные следующие буквы:</h3>
+    <div id="keyboard" class="keyboard"></div>
 
-    <div id="letters" class="buttons"></div>
-
-    <div id="wordStatus" class="card"></div>
-
-    <div class="card">
-      <b>Примеры возможных слов:</b>
-      <div id="examples"></div>
+    <div class="spaceRow">
+      <button class="spaceButton" onclick="addSpace()">Пробел</button>
     </div>
-
-    <div class="card small">
-      Словарь загружается из твоего GitHub-репозитория.
-    </div>
-
   </div>
 
   <script>
-
-    // ТВОЙ RAW-ФАЙЛ
     const LOCAL_DICTIONARY_URL =
       "https://raw.githubusercontent.com/antonLingo/Words/0b8400df77208e47ad6a537be53892fed244a769/russian_words_utf8.txt";
 
     const FALLBACK_WORDS = `
-мне
-нужно
-записаться
-к
-врачу
-боль
-голова
-живот
-температура
-кашель
-клиника
-врач
-доктор
-таблетка
-лекарство
-спасибо
-пожалуйста
-да
-нет
-дом
-машина
-работа
-магазин
-вода
-еда
+мне нужно записаться к врачу боль голова живот температура кашель клиника врач доктор таблетка лекарство
+спасибо пожалуйста да нет дом машина работа магазин вода еда я ты он она мы вы они где когда как что кто
+можно надо хочу могу можете скажите подскажите извините сегодня завтра вчера сейчас помощь проблема вопрос
+ответ прием запись страховка карта номер телефон адрес кабинет регистратура анализ кровь давление горло нос ухо
+глаз зуб спина грудь сердце рука нога шея кожа дышать дыхание трудно лучше хуже
 `.trim().split(/\s+/);
 
-    const RUSSIAN_LETTERS =
-      "абвгдеежзийклмнопрстуфхцчшщъыьэюя";
+    const KEYBOARD_ROWS = [
+      ["й", "ц", "у", "к", "е", "н", "г", "ш", "щ", "з", "х", "ъ"],
+      ["ф", "ы", "в", "а", "п", "р", "о", "л", "д", "ж", "э"],
+      ["я", "ч", "с", "м", "и", "т", "ь", "б", "ю"]
+    ];
 
     let trie = {};
     let currentInput = "";
-    let mode = "dictionary";
+    let forcedLetter = null;
 
     function normalizeWord(word) {
       return String(word)
@@ -223,19 +202,13 @@
     }
 
     function buildTrie(words) {
-
       const root = {};
 
       for (const word of words) {
-
         let node = root;
 
         for (const letter of word) {
-
-          if (!node[letter]) {
-            node[letter] = {};
-          }
-
+          if (!node[letter]) node[letter] = {};
           node = node[letter];
         }
 
@@ -246,308 +219,143 @@
     }
 
     function getCurrentWord() {
-
       const parts = currentInput.split(" ");
-
-      return normalizeWord(
-        parts[parts.length - 1] || ""
-      );
+      return normalizeWord(parts[parts.length - 1] || "");
     }
 
     function getNode(word) {
-
       let node = trie;
 
       for (const letter of word) {
-
-        if (!node[letter]) {
-          return null;
-        }
-
+        if (!node[letter]) return null;
         node = node[letter];
       }
 
       return node;
     }
 
-    function sortRussianLetters(a, b) {
-
-      return RUSSIAN_LETTERS.indexOf(a)
-        - RUSSIAN_LETTERS.indexOf(b);
-    }
-
     function getAvailableLetters() {
-
       const currentWord = getCurrentWord();
-
-      // Режим без словаря
-      if (mode === "rules") {
-
-        return RUSSIAN_LETTERS
-          .split("")
-          .filter(letter => {
-
-            const candidate =
-              currentWord + letter;
-
-            return (
-              !candidate.includes("жы") &&
-              !candidate.includes("шы") &&
-              !candidate.includes("ьь") &&
-              !candidate.includes("ъъ")
-            );
-          });
-      }
-
-      // Режим по словарю
       const node = getNode(currentWord);
 
-      if (!node) {
-        return [];
-      }
+      if (!node) return [];
 
-      return Object.keys(node)
-        .filter(key => key !== "isWord")
-        .sort(sortRussianLetters);
+      return Object.keys(node).filter(key => key !== "isWord");
     }
 
-    function isCompleteWord(word) {
-
-      const node = getNode(word);
-
-      return Boolean(node && node.isWord);
-    }
-
-    function collectExamples(
-      node,
-      prefix,
-      result,
-      limit = 12
-    ) {
-
-      if (!node || result.length >= limit) {
-        return;
-      }
-
-      if (node.isWord) {
-        result.push(prefix);
-      }
-
-      const letters = Object.keys(node)
-        .filter(key => key !== "isWord")
-        .sort(sortRussianLetters);
-
-      for (const letter of letters) {
-
-        if (result.length >= limit) {
-          break;
-        }
-
-        collectExamples(
-          node[letter],
-          prefix + letter,
-          result,
-          limit
-        );
-      }
-    }
-
-    function getExamples() {
-
-      if (mode === "rules") {
-
-        return [
-          "Без словаря реальные слова не проверяются."
-        ];
-      }
-
-      const currentWord = getCurrentWord();
-
-      const node = getNode(currentWord);
-
-      const result = [];
-
-      collectExamples(
-        node,
-        currentWord,
-        result
-      );
-
-      return result;
-    }
-
-    function render() {
-
-      document.getElementById(
-        "currentInput"
-      ).textContent =
-        currentInput || "—";
-
-      document.getElementById(
-        "dictionaryModeBtn"
-      ).className =
-        mode === "dictionary"
-          ? "active"
-          : "secondary";
-
-      document.getElementById(
-        "rulesModeBtn"
-      ).className =
-        mode === "rules"
-          ? "active"
-          : "secondary";
-
-      const lettersBox =
-        document.getElementById("letters");
-
-      lettersBox.innerHTML = "";
-
-      for (const letter of getAvailableLetters()) {
-
-        const button =
-          document.createElement("button");
-
-        button.textContent = letter;
-
-        button.onclick = () => {
-
-          currentInput += letter;
-
-          render();
-        };
-
-        lettersBox.appendChild(button);
-      }
-
-      const currentWord = getCurrentWord();
-
-      document.getElementById(
-        "wordStatus"
-      ).innerHTML =
-        currentWord &&
-        isCompleteWord(currentWord)
-
-          ? `
-            <button class="wordEnd">
-              ✓ Слово найдено:
-              ${currentWord}
-            </button>
-          `
-
-          : "Введите слово или предложение.";
-
-      const examples = getExamples();
-
-      document.getElementById(
-        "examples"
-      ).textContent =
-        examples.length
-          ? examples.join(", ")
-          : "Нет примеров.";
-    }
-
-    function setMode(newMode) {
-
-      mode = newMode;
-
+    function forceLetter(letter) {
+      currentInput += letter;
+      forcedLetter = letter;
       render();
     }
 
-    function removeLastLetter() {
+    function render() {
+      document.getElementById("currentInput").textContent = currentInput || "—";
 
-      currentInput =
-        currentInput.slice(0, -1);
+      const availableLetters = new Set(getAvailableLetters());
+      const keyboard = document.getElementById("keyboard");
+      keyboard.innerHTML = "";
+
+      for (const rowLetters of KEYBOARD_ROWS) {
+        const row = document.createElement("div");
+        row.className = "row";
+
+        for (const letter of rowLetters) {
+          const button = document.createElement("button");
+          button.textContent = letter;
+
+          if (availableLetters.has(letter) || forcedLetter === letter) {
+            button.className = "key";
+
+            button.onclick = () => {
+              currentInput += letter;
+              render();
+            };
+          } else {
+            button.className = "key disabled";
+
+            let clickCount = 0;
+            let clickTimer = null;
+
+            button.onclick = () => {
+              clickCount++;
+
+              clearTimeout(clickTimer);
+
+              clickTimer = setTimeout(() => {
+                clickCount = 0;
+              }, 350);
+
+              if (clickCount >= 2) {
+                forceLetter(letter);
+                clickCount = 0;
+              }
+            };
+          }
+
+          row.appendChild(button);
+        }
+
+        keyboard.appendChild(row);
+      }
+    }
+
+    function removeLastLetter() {
+      currentInput = currentInput.slice(0, -1);
+
+      forcedLetter = null;
 
       render();
     }
 
     function clearInput() {
-
       currentInput = "";
-
+      forcedLetter = null;
       render();
     }
 
     function addSpace() {
-
-      if (
-        currentInput &&
-        !currentInput.endsWith(" ")
-      ) {
-
+      if (currentInput && !currentInput.endsWith(" ")) {
         currentInput += " ";
       }
+
+      forcedLetter = null;
 
       render();
     }
 
     async function loadWords() {
-
-      const status =
-        document.getElementById("status");
+      const status = document.getElementById("status");
 
       try {
-
-        status.innerHTML =
-          "Загружаю словарь...";
-
-        const response =
-          await fetch(LOCAL_DICTIONARY_URL);
+        const response = await fetch(LOCAL_DICTIONARY_URL);
 
         if (!response.ok) {
-
-          throw new Error(
-            "Ошибка загрузки словаря"
-          );
+          throw new Error("Ошибка загрузки словаря");
         }
 
-        const text =
-          await response.text();
-
-        const words =
-          prepareWords(
-            text.split(/\r?\n|\s+/)
-          );
+        const text = await response.text();
+        const words = prepareWords(text.split(/\r?\n|\s+/));
 
         if (words.length < 1000) {
-
-          throw new Error(
-            "Слишком мало слов"
-          );
+          throw new Error("Слишком мало слов");
         }
 
         trie = buildTrie(words);
-
-        status.innerHTML = `
-          ✅ Словарь загружен:
-          <b>
-            ${words.length.toLocaleString("ru-RU")}
-          </b>
-          слов
-        `;
-
+        status.textContent = "";
         render();
-
       } catch (error) {
-
         console.error(error);
 
-        const words =
-          prepareWords(FALLBACK_WORDS);
-
+        const words = prepareWords(FALLBACK_WORDS);
         trie = buildTrie(words);
 
-        status.innerHTML = `
-          ⚠️ Словарь не загрузился.<br>
-          Используется резервный словарь.
-        `;
-
+        status.textContent = "Словарь не загрузился. Используется резервный.";
         render();
       }
     }
 
     loadWords();
-
   </script>
 </body>
 </html>
